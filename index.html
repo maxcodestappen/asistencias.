@@ -692,7 +692,7 @@ input:focus, select:focus {
       <div class="user-menu-popup" id="user-menu-popup">
         <div class="user-info">
           <div class="user-name" id="user-name-menu">Nombre</div>
-          <div class="user-email" id="user-email-menu">email@ejemplo.com</div>
+          <div class="user-email" id="user-email-menu"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="5c39313d35301c393639312c3033723f3331">[email&#160;protected]</a></div>
         </div>
         <div class="menu-item" onclick="goSettings()">⚙️ Configuración</div>
         <div class="menu-item danger" onclick="signOut()">↗ Cerrar sesión</div>
@@ -805,14 +805,14 @@ input:focus, select:focus {
 <button class="fab" id="fab" onclick="openAdd()">+</button>
 
 <!-- Firebase SDK - Modular (Compatible con GitHub Pages) -->
-<script type="module">
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut as fbSignOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 import { getFirestore, collection, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 // Configuración Firebase
 const firebaseConfig = {
-  apiKey: "AIzaSyAov0Ka01oEC-lqbIA5S9rRiIoP3Wg85NE",
+  apiKey: "AIzaSyAov0Ka0i0EC-lqbIA5S9rRiloP3Wg85NE",
   authDomain: "asistencias-1ae8a.firebaseapp.com",
   projectId: "asistencias-1ae8a",
   storageBucket: "asistencias-1ae8a.firebasestorage.app",
@@ -837,20 +837,20 @@ window.doc = doc;
 window.getDoc = getDoc;
 window.setDoc = setDoc;
 
-// STATE
-let currentUser = null;
-let userData = { materias: [] };
-let curId = null;
-let calMonth = new Date();
-let dayKey = null;
-let selDays = [];
-let selColor = 0;
+// STATE - Exponer al global scope
+window.currentUser = null;
+window.userData = { materias: [] };
+window.curId = null;
+window.calMonth = new Date();
+window.dayKey = null;
+window.selDays = [];
+window.selColor = 0;
 
-const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-const DIAS_F = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+window.DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+window.DIAS_F = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+window.MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-const COLORS = [
+window.COLORS = [
   { dot: '#7c6af7', bg: 'rgba(124,106,247,0.13)' },
   { dot: '#38d9a9', bg: 'rgba(56,217,169,0.1)' },
   { dot: '#f06b6b', bg: 'rgba(240,107,107,0.1)' },
@@ -859,16 +859,31 @@ const COLORS = [
   { dot: '#748ffc', bg: 'rgba(116,143,252,0.13)' },
 ];
 
-const cfg = {
+window.cfg = {
   thr_promo: 80,
   thr_regular: 75
 };
 
+// Referencias locales para el módulo
+let currentUser = window.currentUser;
+let userData = window.userData;
+let curId = window.curId;
+let calMonth = window.calMonth;
+let dayKey = window.dayKey;
+let selDays = window.selDays;
+let selColor = window.selColor;
+const DIAS = window.DIAS;
+const DIAS_F = window.DIAS_F;
+const MESES = window.MESES;
+const COLORS = window.COLORS;
+const cfg = window.cfg;
+
 // AUTENTICACIÓN
 window.signInWithGoogle = function() {
   const provider = new GoogleAuthProvider();
-  signInWithPopup(auth, provider)
+  signInWithPopup(window.auth, provider)
     .then(result => {
+      window.currentUser = result.user;
       currentUser = result.user;
       loadUserData();
       updateUI();
@@ -881,14 +896,16 @@ window.signInWithGoogle = function() {
 
 window.signOut = function() {
   if (!confirm('¿Cerrar sesión?')) return;
-  fbSignOut(auth).then(() => {
+  fbSignOut(window.auth).then(() => {
+    window.currentUser = null;
     currentUser = null;
     updateUI();
   });
 }
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(window.auth, user => {
   if (user) {
+    window.currentUser = user;
     currentUser = user;
     loadUserData();
     updateUI();
@@ -903,15 +920,17 @@ async function loadUserData() {
   
   updateSyncDot('syncing');
   try {
-    const docRef = doc(db, 'users', currentUser.uid);
+    const docRef = doc(window.db, 'users', currentUser.uid);
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-      userData = docSnap.data();
-      if (!userData.materias) userData.materias = [];
+      window.userData = docSnap.data();
+      userData = window.userData;
+      if (!window.userData.materias) window.userData.materias = [];
     } else {
-      userData = { materias: [] };
-      await setDoc(docRef, userData);
+      window.userData = { materias: [] };
+      userData = window.userData;
+      await setDoc(docRef, window.userData);
     }
     
     updateSyncDot('ok');
@@ -927,7 +946,7 @@ async function saveUserData() {
   
   updateSyncDot('syncing');
   try {
-    await setDoc(doc(db, 'users', currentUser.uid), userData, { merge: true });
+    await setDoc(doc(window.db, 'users', currentUser.uid), window.userData, { merge: true });
     updateSyncDot('ok');
   } catch (error) {
     console.error('Error saving data:', error);
@@ -1289,18 +1308,4 @@ function toast(msg) {
   el.textContent = msg;
   el.classList.add('show');
   clearTimeout(toastT);
-  toastT = setTimeout(() => el.classList.remove('show'), 2200);
-}
-
-window.bgClose = bgClose;
-window.toast = toast;
-
-// INIT
-window.addEventListener('DOMContentLoaded', () => {
-  initDiasPicker();
-  initColorPicker();
-});
-</script>
-
-</body>
-</html>
+  toastT = setTimeou
