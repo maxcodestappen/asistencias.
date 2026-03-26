@@ -92,7 +92,6 @@ button, input, select { font-family: var(--font); }
 .greeting h2 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
 .greeting p { color: var(--text2); font-size: 14px; margin-top: 4px; line-height: 1.5; }
 
-/* NUEVO EFECTO GLASSMORPHISM EN ESTADÍSTICAS */
 .stats-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 24px; }
 .stat-tile { background: rgba(18, 21, 31, 0.4); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; overflow: hidden; }
 .stat-tile-bg-icon { position: absolute; right: -12px; bottom: -12px; width: 70px; height: 70px; opacity: 0.05; color: white; pointer-events: none; }
@@ -109,12 +108,10 @@ button, input, select { font-family: var(--font); }
 .sec-label { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 16px; }
 .materia-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; }
 
-/* NUEVOS ESTILOS DE TARJETAS Y BARRAS DE PROGRESO */
 .m-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 20px; padding: 16px; cursor: pointer; display: flex; flex-direction: column; transition: all 0.25s var(--ease); -webkit-tap-highlight-color: transparent; height: 100%; position: relative; overflow: hidden; }
 .m-card:hover { border-color: var(--border2); background: var(--bg3); transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.25); }
 .m-card:active { transform: scale(0.96); }
 
-/* Highlight para materia del día */
 .m-card.is-today { border-color: rgba(124,106,247,0.35); box-shadow: 0 8px 24px rgba(124,106,247,0.08); background: linear-gradient(180deg, var(--bg3) 0%, var(--bg2) 100%); }
 
 .m-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
@@ -132,7 +129,6 @@ button, input, select { font-family: var(--font); }
 .m-pill.regular { background: var(--accent-bg); color: var(--accent2); }
 .m-pill.libre { background: var(--red-bg); color: var(--red); }
 
-/* Barra de progreso */
 .p-bar { height: 4px; background: var(--bg4); border-radius: 2px; margin-top: 12px; overflow: hidden; display: flex; }
 .p-fill { height: 100%; border-radius: 2px; transition: width 0.5s var(--ease); }
 
@@ -140,10 +136,10 @@ button, input, select { font-family: var(--font); }
 .quick-actions { display: flex; gap: 6px; margin-top: 14px; }
 .qa-btn { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
 .qa-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
-.qa-btn.qa-att:hover { background: var(--green-bg); color: var(--green); border-color: var(--green); }
-.qa-btn.qa-mis:hover { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.qa-btn.qa-att:hover, .qa-btn.qa-att.active { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+.qa-btn.qa-mis:hover, .qa-btn.qa-mis.active { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+.qa-btn.qa-noc:hover, .qa-btn.qa-noc.active { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
 
-/* Headers de Días estilo Píldora */
 .day-header { display: inline-block; background: var(--bg3); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
 .day-header.active-day { background: var(--accent-bg); color: var(--accent2); border-color: rgba(124,106,247,0.3); box-shadow: 0 0 12px rgba(124,106,247,0.1); }
 
@@ -519,7 +515,6 @@ document.addEventListener('click', e => {
   if (!m.contains(e.target)) document.getElementById('user-menu-popup').classList.remove('open');
 });
 
-// Función para registrar asistencia rápida desde el dashboard
 function quickMark(mId, val) {
   const m = userData.materias.find(x => x.id === mId);
   if (!m.asistencias) m.asistencias = {};
@@ -527,10 +522,16 @@ function quickMark(mId, val) {
   const today = new Date();
   const k = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
   
-  m.asistencias[k] = val;
+  if (m.asistencias[k] === val) {
+    delete m.asistencias[k];
+    toast('Registro eliminado');
+  } else {
+    m.asistencias[k] = val;
+    toast({att:'✓ Presente registrado',mis:'✕ Ausente registrado', noc:'— Sin clase'}[val]);
+  }
+  
   saveUserData();
   renderDash();
-  toast({att:'✓ Presente registrado',mis:'✕ Ausente registrado'}[val]);
 }
 
 function buildCardHTML(m, isToday = false) {
@@ -554,9 +555,19 @@ function buildCardHTML(m, isToday = false) {
   
   let qaHTML = '';
   if (isToday) {
+     const today = new Date();
+     const k = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+     
+     const estadoHoy = (m.asistencias && m.asistencias[k]) ? m.asistencias[k] : null;
+
+     const attActive = estadoHoy === 'att' ? 'active' : '';
+     const misActive = estadoHoy === 'mis' ? 'active' : '';
+     const nocActive = estadoHoy === 'noc' ? 'active' : '';
+
      qaHTML = `<div class="quick-actions">
-                 <button class="qa-btn qa-att" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓ Presente</button>
-                 <button class="qa-btn qa-mis" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕ Ausente</button>
+                 <button class="qa-btn qa-att ${attActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓</button>
+                 <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕</button>
+                 <button class="qa-btn qa-noc ${nocActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'noc')">—</button>
                </div>`;
   }
 
