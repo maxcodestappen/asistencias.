@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* NUEVA PALETA DE COLORES "SLATE / ZINC" OSCURO */
+/* PALETA DE COLORES "SLATE / ZINC" OSCURO */
 :root {
   --bg:       #0b0d14; 
   --bg2:      #12151f;
@@ -132,13 +132,12 @@ button, input, select { font-family: var(--font); }
 .p-bar { height: 4px; background: var(--bg4); border-radius: 2px; margin-top: 12px; overflow: hidden; display: flex; }
 .p-fill { height: 100%; border-radius: 2px; transition: width 0.5s var(--ease); }
 
-/* Botones Quick Action */
+/* Botones Quick Action con estado activo */
 .quick-actions { display: flex; gap: 6px; margin-top: 14px; }
 .qa-btn { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; }
 .qa-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
 .qa-btn.qa-att:hover, .qa-btn.qa-att.active { background: var(--green-bg); color: var(--green); border-color: var(--green); }
 .qa-btn.qa-mis:hover, .qa-btn.qa-mis.active { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.qa-btn.qa-noc:hover, .qa-btn.qa-noc.active { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
 
 .day-header { display: inline-block; background: var(--bg3); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
 .day-header.active-day { background: var(--accent-bg); color: var(--accent2); border-color: rgba(124,106,247,0.3); box-shadow: 0 0 12px rgba(124,106,247,0.1); }
@@ -527,7 +526,7 @@ function quickMark(mId, val) {
     toast('Registro eliminado');
   } else {
     m.asistencias[k] = val;
-    toast({att:'✓ Presente registrado',mis:'✕ Ausente registrado', noc:'— Sin clase'}[val]);
+    toast({att:'✓ Presente registrado',mis:'✕ Ausente registrado'}[val]);
   }
   
   saveUserData();
@@ -562,12 +561,10 @@ function buildCardHTML(m, isToday = false) {
 
      const attActive = estadoHoy === 'att' ? 'active' : '';
      const misActive = estadoHoy === 'mis' ? 'active' : '';
-     const nocActive = estadoHoy === 'noc' ? 'active' : '';
 
      qaHTML = `<div class="quick-actions">
-                 <button class="qa-btn qa-att ${attActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓</button>
-                 <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕</button>
-                 <button class="qa-btn qa-noc ${nocActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'noc')">—</button>
+                 <button class="qa-btn qa-att ${attActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓ Presente</button>
+                 <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕ Ausente</button>
                </div>`;
   }
 
