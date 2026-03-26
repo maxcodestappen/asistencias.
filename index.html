@@ -750,14 +750,20 @@ function renderCal() {
   const mo = calMonth.getMonth();
   document.getElementById('cal-label').textContent = MESES[mo] + ' ' + yr;
   const today = new Date();
-  const fd = new Date(yr, mo, 1).getDay();
+  
+  let fd = new Date(yr, mo, 1).getDay();
+  fd = fd === 0 ? 6 : fd - 1; 
+  
   const dm = new Date(yr, mo+1, 0).getDate();
   let h = DIAS.map(d => `<div class="cal-dh">${d.slice(0, 1)}</div>`).join('');
+  
   for (let i = 0; i < fd; i++) h += `<div class="cal-d"></div>`;
+  
   for (let d = 1; d <= dm; d++) {
     const dow = new Date(yr, mo, d).getDay();
-    const dn = DIAS[dow];
+    const dn = DIAS_F[dow]; 
     const ic = m.dias.includes(dn);
+    
     const k = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const reg = (m.asistencias || {})[k];
     const it = yr===today.getFullYear() && mo===today.getMonth() && d===today.getDate();
