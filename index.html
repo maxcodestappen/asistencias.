@@ -123,7 +123,7 @@ button, input, select { font-family: var(--font); }
 .m-pct.c-muted { color: var(--text3); }
 .m-info { flex-grow: 1; margin-bottom: 12px; }
 .m-nombre { font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; }
-.m-dias { font-size: 11px; color: var(--text3); font-weight: 600; }
+.m-dias { font-size: 11px; color: var(--text3); font-weight: 600; margin-bottom: 4px; }
 .m-pill { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; padding: 4px 8px; border-radius: 6px; }
 .m-pill.promo { background: var(--green-bg); color: var(--green); }
 .m-pill.regular { background: var(--accent-bg); color: var(--accent2); }
@@ -132,12 +132,11 @@ button, input, select { font-family: var(--font); }
 .p-bar { height: 4px; background: var(--bg4); border-radius: 2px; margin-top: 12px; overflow: hidden; display: flex; }
 .p-fill { height: 100%; border-radius: 2px; transition: width 0.5s var(--ease); }
 
-.quick-actions { display: flex; gap: 6px; margin-top: 14px; }
-.qa-btn { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; white-space: nowrap; }
+.quick-actions { display: flex; justify-content: center; margin-top: 14px; }
+.qa-btn { width: 100%; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s; white-space: nowrap; }
 .qa-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
-.qa-btn.qa-att:hover, .qa-btn.qa-att.active { background: var(--green-bg); color: var(--green); border-color: var(--green); }
-.qa-btn.qa-mis:hover, .qa-btn.qa-mis.active { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.qa-btn.qa-noc:hover, .qa-btn.qa-noc.active { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
+.qa-btn.qa-mis { border-color: rgba(240, 107, 107, 0.4); color: var(--red); }
+.qa-btn.qa-mis:hover, .qa-btn.qa-mis.active { background: var(--red-bg); border-color: var(--red); color: var(--red); }
 
 .day-header { display: inline-block; background: var(--bg3); border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
 .day-header.active-day { background: var(--accent-bg); color: var(--accent2); border-color: rgba(77, 138, 255, 0.3); box-shadow: 0 0 12px rgba(77, 138, 255, 0.1); }
@@ -537,7 +536,7 @@ function quickMark(mId, val) {
     toast('Registro limpio (asume presente)');
   } else {
     m.asistencias[k] = val;
-    toast({att:'✓ Presente explícito', mis:'✕ Ausente registrado', noc:'— Sin clase'}[val]);
+    toast({att:'✓ Presente', mis:'✕ Ausencia registrada', noc:'— Sin clase'}[val]);
   }
   
   saveUserData();
@@ -577,7 +576,7 @@ function calcStats(m) {
             if (status === 'mis') {
               mis++;
             } else {
-              // Asistencia optimista: Asumimos presente si la clase ya pasó/es hoy, y no se marcó como ausente.
+              // Asistencia optimista limitándose estrictamente al rango de cursada
               att++; 
             }
           }
@@ -611,6 +610,25 @@ function buildCardHTML(m, isToday = false) {
   const pWidth = pctToUse === null ? '0%' : Math.round(pctToUse) + '%';
   const pColor = pctToUse === null ? 'var(--bg4)' : (pctToUse >= conf.promo ? 'var(--green)' : pctToUse >= conf.regular ? 'var(--accent2)' : 'var(--red)');
   
+  // Cálculo de faltas disponibles
+  const minPromo = Math.ceil(s.totalClasesCuatrimestre * (conf.promo / 100));
+  const minReg = Math.ceil(s.totalClasesCuatrimestre * (conf.regular / 100));
+  const faltasDispPromo = s.totalClasesCuatrimestre - minPromo - s.mis;
+  const faltasDispReg = s.totalClasesCuatrimestre - minReg - s.mis;
+
+  let txtPromo = faltasDispPromo > 0 ? `${faltasDispPromo} disp.` : (faltasDispPromo === 0 ? 'Límite' : 'Perdida');
+  let colPromo = faltasDispPromo <= 2 && faltasDispPromo >= 0 ? 'var(--amber)' : (faltasDispPromo < 0 ? 'var(--red)' : 'var(--text2)');
+  
+  let txtReg = faltasDispReg > 0 ? `${faltasDispReg} disp.` : (faltasDispReg === 0 ? 'Límite' : 'Libre');
+  let colReg = faltasDispReg <= 4 && faltasDispReg >= 0 ? 'var(--amber)' : (faltasDispReg < 0 ? 'var(--red)' : 'var(--text2)');
+
+  const faltasHtml = `
+      <div style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; font-weight:700;">
+          <span style="color:${colPromo}">PROMO: ${s.totalClasesCuatrimestre > 0 ? txtPromo : '-'}</span>
+          <span style="color:${colReg}">REG: ${s.totalClasesCuatrimestre > 0 ? txtReg : '-'}</span>
+      </div>
+  `;
+  
   let cardClass = isToday ? 'm-card is-today' : 'm-card';
   
   let qaHTML = '';
@@ -618,17 +636,11 @@ function buildCardHTML(m, isToday = false) {
      const today = new Date();
      const k = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
      
-     // Si la clase es hoy y no se marcó nada explícitamente, asume 'att' por la asistencia optimista
      let estadoHoy = (m.asistencias && m.asistencias[k]) ? m.asistencias[k] : 'att';
-
-     const attActive = estadoHoy === 'att' ? 'active' : '';
      const misActive = estadoHoy === 'mis' ? 'active' : '';
-     const nocActive = estadoHoy === 'noc' ? 'active' : '';
 
      qaHTML = `<div class="quick-actions">
-                 <button class="qa-btn qa-att ${attActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓ Pres.</button>
-                 <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕ Aus.</button>
-                 <button class="qa-btn qa-noc ${nocActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'noc')">— N/C</button>
+                 <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕ Falté</button>
                </div>`;
   }
 
@@ -644,6 +656,7 @@ function buildCardHTML(m, isToday = false) {
               <div class="m-nombre">${m.nombre}</div>
               <div class="m-dias">${dt}</div>
               <div class="p-bar"><div class="p-fill" style="width: ${pWidth}; background: ${pColor};"></div></div>
+              ${faltasHtml}
             </div>
             ${qaHTML}
           </div>`;
@@ -759,7 +772,6 @@ function renderProy(s) {
     return;
   }
 
-  // Cálculos de márgenes
   const minPromo = Math.ceil(s.totalClasesCuatrimestre * (conf.promo / 100));
   const minReg = Math.ceil(s.totalClasesCuatrimestre * (conf.regular / 100));
 
@@ -785,7 +797,6 @@ function renderProy(s) {
   r += pv('Clases totales estimadas', s.totalClasesCuatrimestre, 'var(--text)');
   r += pv('Registro actual', asistTxt, 'var(--text2)');
 
-  // Proyección de Promo
   if (faltasDispPromo > 0) {
     let alertHtml = '';
     if (faltasDispPromo <= 2) alertHtml = `<span class="alert-note">⚠️ A ${faltasDispPromo} falta(s) de perder la promo</span>`;
@@ -796,7 +807,6 @@ function renderProy(s) {
     r += pv('Para Promocionar', `Perdida (${Math.abs(faltasDispPromo)} faltas de más)`, 'var(--red)');
   }
 
-  // Proyección de Regularidad
   if (faltasDispReg > 0) {
     let alertHtml = '';
     if (faltasDispReg <= 4) alertHtml = `<span class="alert-note">⚠️ A ${faltasDispReg} falta(s) de quedar libre</span>`;
@@ -853,9 +863,11 @@ function renderCal() {
         
         const curMidnight = new Date(yr, mo, d);
         const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const termStartMidnight = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
+        const termEndMidnight = new Date(TERM_END.getFullYear(), TERM_END.getMonth(), TERM_END.getDate());
         
-        // Aplica asistencia optimista visualmente en el calendario para días pasados o actuales sin registro
-        if (!reg && curMidnight <= todayMidnight) {
+        // Aplica asistencia optimista limitándose estrictamente al rango del cuatrimestre
+        if (!reg && curMidnight <= todayMidnight && curMidnight >= termStartMidnight && curMidnight <= termEndMidnight) {
           reg = 'att';
         }
 
@@ -889,9 +901,10 @@ function openDay(key, d, mo, yr) {
   
   const curMidnight = new Date(yr, mo, d);
   const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const termStartMidnight = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
+  const termEndMidnight = new Date(TERM_END.getFullYear(), TERM_END.getMonth(), TERM_END.getDate());
   
-  // Si no hay registro pero ya pasó, pre-selecciona "Asistencia" en el modal
-  if (!reg && curMidnight <= todayMidnight) {
+  if (!reg && curMidnight <= todayMidnight && curMidnight >= termStartMidnight && curMidnight <= termEndMidnight) {
     reg = 'att';
   }
 
