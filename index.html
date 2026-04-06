@@ -165,7 +165,6 @@ button, input, select { font-family: var(--font); }
 .cal-d.cls-day:hover { background: var(--bg4); }
 .cal-d.cls-day.att { background: var(--green-bg); color: var(--green); border-color: var(--green); }
 .cal-d.cls-day.mis { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-/* Nuevo estilo sin color para los días marcados como 'Sin clase' */
 .cal-d.cls-day.noc { background: transparent; color: var(--text3); border-color: transparent; opacity: 0.6; }
 
 .cal-d.today-ring { box-shadow: inset 0 0 0 2px var(--accent2); }
@@ -344,6 +343,16 @@ input:focus, select:focus { outline: none; border-color: var(--accent2); box-sha
     </div>
     <div>
       <input type="text" id="inp-nombre" placeholder="Nombre de la materia" />
+      
+      <div style="margin-bottom: 16px;">
+        <div style="font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 10px; text-transform: uppercase;">Semestre</div>
+        <select id="inp-semestre">
+          <option value="1">Primer Semestre</option>
+          <option value="2">Segundo Semestre</option>
+          <option value="anual">Anual (Ambos)</option>
+        </select>
+      </div>
+
       <div style="margin-bottom: 16px;">
         <div style="font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 10px; text-transform: uppercase;">Días</div>
         <div class="dias-wrap" id="dias-wrap"></div>
@@ -475,16 +484,22 @@ function getConfig() {
   return userData.config;
 }
 
-function getTermsList() {
+function getMateriaTerms(m) {
   const c = getConfig();
-  return [
-    { s: c.t1s, e: c.t1e },
-    { s: c.t2s, e: c.t2e }
-  ];
+  let terms = [];
+  const sem = m.semestre || '1'; // Por defecto, asumimos 1° Semestre si no está seteado
+  
+  if (sem === '1' || sem === 'anual') {
+    terms.push({ s: c.t1s, e: c.t1e });
+  }
+  if (sem === '2' || sem === 'anual') {
+    terms.push({ s: c.t2s, e: c.t2e });
+  }
+  return terms;
 }
 
-function isDayInTerms(ymd) {
-  const terms = getTermsList();
+function isDayInMateriaTerms(ymd, m) {
+  const terms = getMateriaTerms(m);
   return terms.some(t => ymd >= t.s && ymd <= t.e);
 }
 
@@ -521,7 +536,7 @@ async function loadUserData() {
     const doc = await db.collection('users').doc(currentUser.uid).get();
     userData = doc.exists ? doc.data() : { materias: [] };
     if (!userData.materias) userData.materias = [];
-    getConfig(); // asegurar estructura base
+    getConfig(); 
     if (!doc.exists) await db.collection('users').doc(currentUser.uid).set(userData);
     updateSyncDot('ok');
   } catch (e) { 
@@ -603,7 +618,7 @@ function calcStats(m) {
     return { att:0, mis:0, nocManuales:0, validas:0, pctActual:null, totalClasesCuatrimestre:0 };
   }
 
-  const terms = getTermsList();
+  const terms = getMateriaTerms(m);
   const now = new Date();
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -662,7 +677,9 @@ function buildCardHTML(m, isToday = false) {
   const pv = pctToUse === null ? '—' : Math.round(pctToUse) + '%';
   const pl = pctToUse === null ? 'regular' : (pctToUse >= conf.promo ? 'promo' : pctToUse >= conf.regular ? 'regular' : 'libre');
   const pt = pctToUse === null ? 'Sin datos' : (pctToUse >= conf.promo ? 'Promo' : pctToUse >= conf.regular ? 'Regular' : 'Libre');
-  const dt = m.dias.join(', ') || 'sin días';
+  
+  const semTxt = m.semestre === '2' ? '2° Sem' : (m.semestre === 'anual' ? 'Anual' : '1° Sem');
+  const dt = (m.dias.join(', ') || 'sin días') + ' · ' + semTxt;
   const c = COLORS[m.color] || COLORS[0];
   
   const pWidth = pctToUse === null ? '0%' : Math.round(pctToUse) + '%';
@@ -912,8 +929,7 @@ function renderCal() {
     const it = yr===today.getFullYear() && mo===today.getMonth() && d===today.getDate();
     let c = 'cal-d';
     
-    // Validar si el día está dentro de algún semestre configurado
-    const inTerm = isDayInTerms(k);
+    const inTerm = isDayInMateriaTerms(k, m);
 
     if (ic && inTerm) {
       if (isFeriado) {
@@ -961,7 +977,8 @@ function openDay(key, d, mo, yr) {
   const curMidnight = new Date(yr, mo, d);
   const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
   
-  if (!reg && curMidnight <= todayMidnight) {
+  const inTerm = isDayInMateriaTerms(key, m);
+  if (!reg && curMidnight <= todayMidnight && inTerm) {
     reg = 'att';
   }
 
@@ -1034,6 +1051,7 @@ function openAdd() {
   document.getElementById('modal-mat-btn').textContent = 'Agregar';
   
   document.getElementById('inp-nombre').value = '';
+  document.getElementById('inp-semestre').value = '1';
   document.querySelectorAll('.d-btn').forEach(b => b.classList.remove('on'));
   document.querySelectorAll('.c-dot').forEach((b, i) => b.classList.toggle('on', i === 0));
   
@@ -1052,6 +1070,7 @@ function openEdit() {
   document.getElementById('modal-mat-btn').textContent = 'Guardar cambios';
   
   document.getElementById('inp-nombre').value = m.nombre;
+  document.getElementById('inp-semestre').value = m.semestre || '1';
   
   document.querySelectorAll('.d-btn').forEach((b, i) => {
     b.classList.toggle('on', selDays.includes(DIAS[i]));
@@ -1071,12 +1090,14 @@ function closeAdd() {
 
 function saveMateria() {
   const nom = document.getElementById('inp-nombre').value.trim();
+  const sem = document.getElementById('inp-semestre').value;
   if (!nom) { toast('Escribí el nombre'); return; }
   const dias = [...selDays].sort((a, b) => DIAS.indexOf(a) - DIAS.indexOf(b));
   
   if (isEditing) {
     const m = userData.materias.find(x => x.id === curId);
     m.nombre = nom;
+    m.semestre = sem;
     m.dias = dias;
     m.color = selColor;
     
@@ -1086,6 +1107,7 @@ function saveMateria() {
     userData.materias.push({
       id: crypto.randomUUID(),
       nombre: nom,
+      semestre: sem,
       dias,
       color: selColor,
       asistencias: {}
