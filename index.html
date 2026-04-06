@@ -160,11 +160,14 @@ button, input, select { font-family: var(--font); }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal-dh { text-align: center; font-size: 11px; font-weight: 700; color: var(--text3); padding: 6px 0; }
 .cal-d { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 12px; cursor: default; font-weight: 600; color: var(--text3); background: transparent; transition: all 0.2s; }
+
 .cal-d.cls-day { cursor: pointer; color: var(--text); background: var(--bg3); border: 1px solid var(--border); }
 .cal-d.cls-day:hover { background: var(--bg4); }
 .cal-d.cls-day.att { background: var(--green-bg); color: var(--green); border-color: var(--green); }
 .cal-d.cls-day.mis { background: var(--red-bg); color: var(--red); border-color: var(--red); }
-.cal-d.cls-day.noc { background: var(--amber-bg); color: var(--amber); border-color: var(--amber); }
+/* Nuevo estilo sin color para los días marcados como 'Sin clase' */
+.cal-d.cls-day.noc { background: transparent; color: var(--text3); border-color: transparent; opacity: 0.6; }
+
 .cal-d.today-ring { box-shadow: inset 0 0 0 2px var(--accent2); }
 .overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 150; align-items: flex-end; justify-content: center; }
 .overlay.open { display: flex; }
@@ -184,9 +187,9 @@ button, input, select { font-family: var(--font); }
 .opt-mis-btn { color: var(--red); border-color: rgba(240, 107, 107, 0.25); background: rgba(240, 107, 107, 0.05); }
 .opt-mis-btn:hover { border-color: var(--red); background: rgba(240, 107, 107, 0.15); }
 .att-opt.sel-mis { border-color: var(--red); background: var(--red); color: #000; }
-.opt-noc-btn { color: var(--amber); border-color: rgba(245, 183, 49, 0.25); background: rgba(245, 183, 49, 0.05); }
-.opt-noc-btn:hover { border-color: var(--amber); background: rgba(245, 183, 49, 0.15); }
-.att-opt.sel-noc { border-color: var(--amber); background: var(--amber); color: #000; }
+.opt-noc-btn { color: var(--text2); border-color: rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.05); }
+.opt-noc-btn:hover { border-color: var(--text2); background: rgba(255, 255, 255, 0.1); }
+.att-opt.sel-noc { border-color: var(--text2); background: var(--text2); color: #000; }
 
 .btn { padding: 12px 16px; border: none; border-radius: var(--r-md); font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .btn-primary { background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%); color: white; }
@@ -199,7 +202,8 @@ button, input, select { font-family: var(--font); }
 .fab:hover { transform: translateY(-4px); box-shadow: 0 16px 32px rgba(77, 138, 255, 0.35); }
 .fab:active { transform: scale(0.92); }
 .fab.hidden { display: none; }
-input[type="text"], input[type="email"], input[type="password"], input[type="number"], select { width: 100%; padding: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--text); font-size: 14px; transition: all 0.2s; margin-bottom: 12px; font-family: var(--font); font-weight: 500; }
+input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="date"], select { width: 100%; padding: 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r-md); color: var(--text); font-size: 14px; transition: all 0.2s; margin-bottom: 12px; font-family: var(--font); font-weight: 500; }
+input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
 input:focus, select:focus { outline: none; border-color: var(--accent2); box-shadow: 0 0 0 3px var(--accent-bg); }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(200px); background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: var(--r-md); z-index: 1000; font-size: 13px; transition: all 0.3s var(--ease); max-width: 90%; pointer-events: none; font-weight: 600; }
 .toast.show { transform: translateX(-50%) translateY(0); pointer-events: all; }
@@ -357,23 +361,54 @@ input:focus, select:focus { outline: none; border-color: var(--accent2); box-sha
 </div>
 
 <div class="overlay" id="settings-overlay" onclick="bgClose(event, 'settings-overlay')">
-  <div class="modal">
+  <div class="modal" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-header">
       <div class="modal-title">Configuración</div>
-      <div class="modal-desc">Ajustá los porcentajes necesarios para tu facultad</div>
+      <div class="modal-desc">Ajustá los porcentajes y fechas de tu cursada</div>
     </div>
     <div>
-      <div style="margin-bottom: 16px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase;">% Para Promocionar (ej. 80)</div>
-        <input type="number" id="inp-cfg-promo" min="1" max="100" placeholder="80" />
+      <div style="display: flex; gap: 12px; margin-bottom: 20px;">
+          <div style="flex:1;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase;">% Promoción</div>
+            <input type="number" id="inp-cfg-promo" min="1" max="100" placeholder="80" />
+          </div>
+          <div style="flex:1;">
+            <div style="font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase;">% Regularidad</div>
+            <input type="number" id="inp-cfg-reg" min="1" max="100" placeholder="60" />
+          </div>
       </div>
-      <div style="margin-bottom: 24px;">
-        <div style="font-size: 12px; font-weight: 700; color: var(--text2); margin-bottom: 6px; text-transform: uppercase;">% Para Regularizar (ej. 60)</div>
-        <input type="number" id="inp-cfg-reg" min="1" max="100" placeholder="60" />
+      
+      <div style="background: var(--bg3); padding: 12px; border-radius: var(--r-md); margin-bottom: 16px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 12px; text-transform: uppercase;">Primer Semestre</div>
+        <div style="display: flex; gap: 12px;">
+            <div style="flex:1;">
+              <div style="font-size: 10px; color: var(--text3); margin-bottom: 4px;">Desde</div>
+              <input type="date" id="inp-cfg-t1s" />
+            </div>
+            <div style="flex:1;">
+              <div style="font-size: 10px; color: var(--text3); margin-bottom: 4px;">Hasta</div>
+              <input type="date" id="inp-cfg-t1e" />
+            </div>
+        </div>
       </div>
+
+      <div style="background: var(--bg3); padding: 12px; border-radius: var(--r-md); margin-bottom: 24px; border: 1px solid var(--border);">
+        <div style="font-size: 12px; font-weight: 800; color: var(--text); margin-bottom: 12px; text-transform: uppercase;">Segundo Semestre</div>
+        <div style="display: flex; gap: 12px;">
+            <div style="flex:1;">
+              <div style="font-size: 10px; color: var(--text3); margin-bottom: 4px;">Desde</div>
+              <input type="date" id="inp-cfg-t2s" />
+            </div>
+            <div style="flex:1;">
+              <div style="font-size: 10px; color: var(--text3); margin-bottom: 4px;">Hasta</div>
+              <input type="date" id="inp-cfg-t2e" />
+            </div>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button class="btn btn-secondary" onclick="closeSettings()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveSettings()">Guardar Cambios</button>
+        <button class="btn btn-primary" onclick="saveSettings()">Guardar</button>
       </div>
     </div>
   </div>
@@ -422,9 +457,6 @@ const COLORS = [
   { dot: '#9775fa', bg: 'rgba(151, 117, 250, 0.13)' },
 ];
 
-/* Fechas límite y feriados */
-const TERM_START = new Date(2026, 2, 9); // 9 de marzo 2026
-const TERM_END = new Date(2026, 5, 20, 23, 59, 59); // 20 de junio 2026
 const FERIADOS = [
   '2026-03-23', '2026-03-24',
   '2026-04-02', '2026-04-03',
@@ -433,8 +465,27 @@ const FERIADOS = [
 ];
 
 function getConfig() {
-  if (!userData.config) userData.config = { promo: 80, regular: 60 };
+  if (!userData.config) userData.config = {};
+  if (!userData.config.promo) userData.config.promo = 80;
+  if (!userData.config.regular) userData.config.regular = 60;
+  if (!userData.config.t1s) userData.config.t1s = '2026-03-09';
+  if (!userData.config.t1e) userData.config.t1e = '2026-06-20';
+  if (!userData.config.t2s) userData.config.t2s = '2026-08-10';
+  if (!userData.config.t2e) userData.config.t2e = '2026-11-20';
   return userData.config;
+}
+
+function getTermsList() {
+  const c = getConfig();
+  return [
+    { s: c.t1s, e: c.t1e },
+    { s: c.t2s, e: c.t2e }
+  ];
+}
+
+function isDayInTerms(ymd) {
+  const terms = getTermsList();
+  return terms.some(t => ymd >= t.s && ymd <= t.e);
 }
 
 function signInWithGoogle() {
@@ -470,7 +521,7 @@ async function loadUserData() {
     const doc = await db.collection('users').doc(currentUser.uid).get();
     userData = doc.exists ? doc.data() : { materias: [] };
     if (!userData.materias) userData.materias = [];
-    if (!userData.config) userData.config = { promo: 80, regular: 60 };
+    getConfig(); // asegurar estructura base
     if (!doc.exists) await db.collection('users').doc(currentUser.uid).set(userData);
     updateSyncDot('ok');
   } catch (e) { 
@@ -552,42 +603,49 @@ function calcStats(m) {
     return { att:0, mis:0, nocManuales:0, validas:0, pctActual:null, totalClasesCuatrimestre:0 };
   }
 
-  let cur = new Date(TERM_START);
+  const terms = getTermsList();
   const now = new Date();
   const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  while (cur <= TERM_END) {
-    const dow = cur.getDay();
-    const dn = DIAS_F[dow];
+  terms.forEach(t => {
+    if (!t.s || !t.e) return;
+    const [sy, sm, sd] = t.s.split('-');
+    const [ey, em, ed] = t.e.split('-');
+    
+    let cur = new Date(sy, sm-1, sd);
+    const end = new Date(ey, em-1, ed);
 
-    if (m.dias.includes(dn)) {
-      const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+    while (cur <= end) {
+      const dow = cur.getDay();
+      const dn = DIAS_F[dow];
 
-      if (!FERIADOS.includes(k)) {
-        const status = a[k];
-        if (status === 'noc') {
-          nocManuales++;
-        } else {
-          totalClasesCuatrimestre++;
+      if (m.dias.includes(dn)) {
+        const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
 
-          let curMidnight = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
-          
-          if (curMidnight <= todayDate) {
-            if (status === 'mis') {
-              mis++;
-            } else {
-              // Asistencia optimista limitándose estrictamente al rango de cursada
-              att++; 
+        if (!FERIADOS.includes(k)) {
+          const status = a[k];
+          if (status === 'noc') {
+            nocManuales++;
+          } else {
+            totalClasesCuatrimestre++;
+
+            let curMidnight = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
+            
+            if (curMidnight <= todayDate) {
+              if (status === 'mis') {
+                mis++;
+              } else {
+                att++; 
+              }
             }
           }
         }
       }
+      cur.setDate(cur.getDate() + 1);
     }
-    cur.setDate(cur.getDate() + 1);
-  }
+  });
 
   const pctActual = (att + mis) > 0 ? (att / (att + mis)) * 100 : null;
-
   return { att, mis, nocManuales, validas: att + mis, pctActual, totalClasesCuatrimestre };
 }
 
@@ -610,7 +668,6 @@ function buildCardHTML(m, isToday = false) {
   const pWidth = pctToUse === null ? '0%' : Math.round(pctToUse) + '%';
   const pColor = pctToUse === null ? 'var(--bg4)' : (pctToUse >= conf.promo ? 'var(--green)' : pctToUse >= conf.regular ? 'var(--accent2)' : 'var(--red)');
   
-  // Cálculo de faltas disponibles
   const minPromo = Math.ceil(s.totalClasesCuatrimestre * (conf.promo / 100));
   const minReg = Math.ceil(s.totalClasesCuatrimestre * (conf.regular / 100));
   const faltasDispPromo = s.totalClasesCuatrimestre - minPromo - s.mis;
@@ -855,7 +912,10 @@ function renderCal() {
     const it = yr===today.getFullYear() && mo===today.getMonth() && d===today.getDate();
     let c = 'cal-d';
     
-    if (ic) {
+    // Validar si el día está dentro de algún semestre configurado
+    const inTerm = isDayInTerms(k);
+
+    if (ic && inTerm) {
       if (isFeriado) {
         c += ' noc'; 
       } else {
@@ -863,11 +923,9 @@ function renderCal() {
         
         const curMidnight = new Date(yr, mo, d);
         const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const termStartMidnight = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
-        const termEndMidnight = new Date(TERM_END.getFullYear(), TERM_END.getMonth(), TERM_END.getDate());
         
-        // Aplica asistencia optimista limitándose estrictamente al rango del cuatrimestre
-        if (!reg && curMidnight <= todayMidnight && curMidnight >= termStartMidnight && curMidnight <= termEndMidnight) {
+        // Asistencia optimista solo si es un día de clases válido hasta hoy
+        if (!reg && curMidnight <= todayMidnight) {
           reg = 'att';
         }
 
@@ -876,10 +934,11 @@ function renderCal() {
         else if (reg === 'noc') c += ' noc';
       }
     }
+    
     if (it) c += ' today-ring';
     
-    const cl = (ic && !isFeriado) ? `onclick="openDay('${k}',${d},${mo},${yr})"` : '';
-    const feriadoTag = (ic && isFeriado) ? `<span style="font-size: 8px; position: absolute; bottom: 2px;">F</span>` : '';
+    const cl = (ic && inTerm && !isFeriado) ? `onclick="openDay('${k}',${d},${mo},${yr})"` : '';
+    const feriadoTag = (ic && isFeriado && inTerm) ? `<span style="font-size: 8px; position: absolute; bottom: 2px;">F</span>` : '';
     
     h += `<div class="${c}" style="position:relative;" ${cl}>${d}${feriadoTag}</div>`;
   }
@@ -901,10 +960,8 @@ function openDay(key, d, mo, yr) {
   
   const curMidnight = new Date(yr, mo, d);
   const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
-  const termStartMidnight = new Date(TERM_START.getFullYear(), TERM_START.getMonth(), TERM_START.getDate());
-  const termEndMidnight = new Date(TERM_END.getFullYear(), TERM_END.getMonth(), TERM_END.getDate());
   
-  if (!reg && curMidnight <= todayMidnight && curMidnight >= termStartMidnight && curMidnight <= termEndMidnight) {
+  if (!reg && curMidnight <= todayMidnight) {
     reg = 'att';
   }
 
@@ -1045,6 +1102,11 @@ function openSettings() {
   const conf = getConfig();
   document.getElementById('inp-cfg-promo').value = conf.promo;
   document.getElementById('inp-cfg-reg').value = conf.regular;
+  document.getElementById('inp-cfg-t1s').value = conf.t1s;
+  document.getElementById('inp-cfg-t1e').value = conf.t1e;
+  document.getElementById('inp-cfg-t2s').value = conf.t2s;
+  document.getElementById('inp-cfg-t2e').value = conf.t2e;
+  
   document.getElementById('settings-overlay').classList.add('open');
 }
 
@@ -1069,6 +1131,11 @@ function saveSettings() {
   if (!userData.config) userData.config = {};
   userData.config.promo = promo;
   userData.config.regular = reg;
+  
+  userData.config.t1s = document.getElementById('inp-cfg-t1s').value || '2026-03-09';
+  userData.config.t1e = document.getElementById('inp-cfg-t1e').value || '2026-06-20';
+  userData.config.t2s = document.getElementById('inp-cfg-t2s').value || '2026-08-10';
+  userData.config.t2e = document.getElementById('inp-cfg-t2e').value || '2026-11-20';
   
   saveUserData();
   closeSettings();
