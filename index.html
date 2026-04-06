@@ -534,14 +534,62 @@ function quickMark(mId, val) {
   
   if (m.asistencias[k] === val) {
     delete m.asistencias[k];
-    toast('Registro eliminado');
+    toast('Registro limpio (asume presente)');
   } else {
     m.asistencias[k] = val;
-    toast({att:'✓ Presente registrado',mis:'✕ Ausente registrado', noc:'— Sin clase'}[val]);
+    toast({att:'✓ Presente explícito', mis:'✕ Ausente registrado', noc:'— Sin clase'}[val]);
   }
   
   saveUserData();
   renderDash();
+}
+
+function calcStats(m) {
+  const a = m.asistencias || {};
+  let att = 0, mis = 0, nocManuales = 0;
+  let totalClasesCuatrimestre = 0;
+
+  if (!m.dias || m.dias.length === 0) {
+    return { att:0, mis:0, nocManuales:0, validas:0, pctActual:null, totalClasesCuatrimestre:0 };
+  }
+
+  let cur = new Date(TERM_START);
+  const now = new Date();
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  while (cur <= TERM_END) {
+    const dow = cur.getDay();
+    const dn = DIAS_F[dow];
+
+    if (m.dias.includes(dn)) {
+      const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+
+      if (!FERIADOS.includes(k)) {
+        const status = a[k];
+        if (status === 'noc') {
+          nocManuales++;
+        } else {
+          totalClasesCuatrimestre++;
+
+          let curMidnight = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate());
+          
+          if (curMidnight <= todayDate) {
+            if (status === 'mis') {
+              mis++;
+            } else {
+              // Asistencia optimista: Asumimos presente si la clase ya pasó/es hoy, y no se marcó como ausente.
+              att++; 
+            }
+          }
+        }
+      }
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  const pctActual = (att + mis) > 0 ? (att / (att + mis)) * 100 : null;
+
+  return { att, mis, nocManuales, validas: att + mis, pctActual, totalClasesCuatrimestre };
 }
 
 function buildCardHTML(m, isToday = false) {
@@ -551,7 +599,7 @@ function buildCardHTML(m, isToday = false) {
   let iniciales = m.nombre.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
   if (m.nombre.split(' ').length === 1) iniciales = m.nombre.substring(0, 1).toUpperCase();
 
-  const pctToUse = s.pctGlobal !== null ? s.pctGlobal : (s.pctActual !== null ? s.pctActual : null);
+  const pctToUse = s.pctActual;
   
   const pc = pctToUse === null ? 'c-muted' : (pctToUse >= conf.promo ? 'c-green' : pctToUse >= conf.regular ? 'c-accent' : 'c-red');
   const pv = pctToUse === null ? '—' : Math.round(pctToUse) + '%';
@@ -570,7 +618,8 @@ function buildCardHTML(m, isToday = false) {
      const today = new Date();
      const k = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
      
-     const estadoHoy = (m.asistencias && m.asistencias[k]) ? m.asistencias[k] : null;
+     // Si la clase es hoy y no se marcó nada explícitamente, asume 'att' por la asistencia optimista
+     let estadoHoy = (m.asistencias && m.asistencias[k]) ? m.asistencias[k] : 'att';
 
      const attActive = estadoHoy === 'att' ? 'active' : '';
      const misActive = estadoHoy === 'mis' ? 'active' : '';
@@ -618,25 +667,21 @@ function renderDash() {
   const conf = getConfig();
   let cLibre = 0, cPromo = 0;
   
-  let totalPctGlobal = 0;
-  let countMatsGlobal = 0;
+  let totalPctActual = 0;
+  let countMatsValidas = 0;
 
   mats.forEach(m => { 
     const s = calcStats(m); 
     
-    if (s.pctGlobal !== null) {
-      totalPctGlobal += s.pctGlobal;
-      countMatsGlobal++;
-      if (s.pctGlobal < conf.regular) cLibre++;
-      else if (s.pctGlobal >= conf.promo) cPromo++;
-    } else if (s.pctActual !== null) {
-      // Fallback a clases cargadas si no empezó
+    if (s.pctActual !== null) {
+      totalPctActual += s.pctActual;
+      countMatsValidas++;
       if (s.pctActual < conf.regular) cLibre++;
       else if (s.pctActual >= conf.promo) cPromo++;
     }
   });
 
-  document.getElementById('avg-pct').textContent = countMatsGlobal > 0 ? Math.round(totalPctGlobal / countMatsGlobal) + '%' : '—';
+  document.getElementById('avg-pct').textContent = countMatsValidas > 0 ? Math.round(totalPctActual / countMatsValidas) + '%' : '—';
   document.getElementById('mat-libre').textContent = cLibre;
   document.getElementById('mat-promo').textContent = cPromo;
   
@@ -678,43 +723,6 @@ function renderDash() {
   }
 
   document.getElementById('materia-container').innerHTML = h;
-}
-
-function getTotalClasses(m) {
-  if (!m.dias || m.dias.length === 0) return 0;
-  let total = 0;
-  let cur = new Date(TERM_START);
-  
-  while (cur <= TERM_END) {
-    const dow = cur.getDay();
-    const dn = DIAS_F[dow];
-    
-    if (m.dias.includes(dn)) {
-      const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
-      if (!FERIADOS.includes(k) && (m.asistencias || {})[k] !== 'noc') {
-        total++;
-      }
-    }
-    cur.setDate(cur.getDate() + 1);
-  }
-  return total;
-}
-
-function calcStats(m) {
-  const a = m.asistencias || {};
-  let att = 0, mis = 0, nocManuales = 0;
-  
-  Object.values(a).forEach(v => { 
-    if (v === 'att') att++; 
-    else if (v === 'mis') mis++; 
-    else if (v === 'noc') nocManuales++; 
-  });
-  
-  const totalClasesCuatrimestre = getTotalClasses(m);
-  const pctActual = (att + mis) > 0 ? (att / (att + mis)) * 100 : null;
-  const pctGlobal = totalClasesCuatrimestre > 0 ? (att / totalClasesCuatrimestre) * 100 : null;
-
-  return { att, mis, nocManuales, validas: att + mis, pctActual, pctGlobal, totalClasesCuatrimestre };
 }
 
 function openDetail(id) {
@@ -832,16 +840,25 @@ function renderCal() {
     const ic = m.dias.includes(dn);
     
     const k = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const reg = (m.asistencias || {})[k];
+    let reg = (m.asistencias || {})[k];
     const isFeriado = FERIADOS.includes(k);
     const it = yr===today.getFullYear() && mo===today.getMonth() && d===today.getDate();
     let c = 'cal-d';
     
     if (ic) {
       if (isFeriado) {
-        c += ' noc'; // Lo pintamos sutilmente como si no hubiera clase
+        c += ' noc'; 
       } else {
         c += ' cls-day';
+        
+        const curMidnight = new Date(yr, mo, d);
+        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        
+        // Aplica asistencia optimista visualmente en el calendario para días pasados o actuales sin registro
+        if (!reg && curMidnight <= todayMidnight) {
+          reg = 'att';
+        }
+
         if (reg === 'att') c += ' att';
         else if (reg === 'mis') c += ' mis';
         else if (reg === 'noc') c += ' noc';
@@ -849,10 +866,7 @@ function renderCal() {
     }
     if (it) c += ' today-ring';
     
-    // Si es feriado no dejamos hacer clic para marcar asistencia
     const cl = (ic && !isFeriado) ? `onclick="openDay('${k}',${d},${mo},${yr})"` : '';
-    
-    // Agregamos una F pequeñita si es feriado
     const feriadoTag = (ic && isFeriado) ? `<span style="font-size: 8px; position: absolute; bottom: 2px;">F</span>` : '';
     
     h += `<div class="${c}" style="position:relative;" ${cl}>${d}${feriadoTag}</div>`;
@@ -868,11 +882,19 @@ function changeMonth(dir) {
 function openDay(key, d, mo, yr) {
   dayKey = key;
   const m = userData.materias.find(x => x.id === curId);
-  const reg = (m.asistencias || {})[key];
+  let reg = (m.asistencias || {})[key];
   const dow = new Date(yr, mo, d).getDay();
   document.getElementById('day-date-lbl').textContent = `${DIAS_F[dow]}, ${d} de ${MESES[mo]}`;
   document.getElementById('day-mat-name').textContent = m.nombre;
   
+  const curMidnight = new Date(yr, mo, d);
+  const todayMidnight = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  
+  // Si no hay registro pero ya pasó, pre-selecciona "Asistencia" en el modal
+  if (!reg && curMidnight <= todayMidnight) {
+    reg = 'att';
+  }
+
   document.getElementById('opt-att').className = 'att-opt opt-att-btn';
   document.getElementById('opt-mis').className = 'att-opt opt-mis-btn';
   document.getElementById('opt-noc').className = 'att-opt opt-noc-btn';
