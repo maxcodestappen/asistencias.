@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* NUEVA PALETA DE COLORES "UCC" (Azules Profundos) */
+/* PALETA DE COLORES "UCC" (Azules Profundos) */
 :root {
   --bg:       #020b18; 
   --bg2:      #08172e;
@@ -20,8 +20,8 @@
   --text:     #f8f9fa;
   --text2:    #a3b8cc;
   --text3:    #6b87a8;
-  --accent:   #003882; /* Azul UCC Original */
-  --accent2:  #4d8aff; /* Azul luminoso para acentos */
+  --accent:   #003882; 
+  --accent2:  #4d8aff; 
   --accent-bg:rgba(77, 138, 255, 0.15);
   --green:    #2bc48a;
   --green-bg: rgba(43, 196, 138, 0.12);
@@ -132,7 +132,6 @@ button, input, select { font-family: var(--font); }
 .p-bar { height: 4px; background: var(--bg4); border-radius: 2px; margin-top: 12px; overflow: hidden; display: flex; }
 .p-fill { height: 100%; border-radius: 2px; transition: width 0.5s var(--ease); }
 
-/* Botones Quick Action arreglados */
 .quick-actions { display: flex; gap: 6px; margin-top: 14px; }
 .qa-btn { flex: 1; padding: 8px 0; border-radius: 8px; border: 1px solid var(--border); background: var(--bg3); color: var(--text2); font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.2s; white-space: nowrap; }
 .qa-btn:hover { background: var(--bg4); color: var(--text); border-color: var(--border2); }
@@ -152,6 +151,7 @@ button, input, select { font-family: var(--font); }
 .proy-val { font-weight: 700; text-align: right; max-width: 60%; line-height: 1.3; }
 .ponder-note { background: var(--amber-bg); border: 1px solid rgba(245,183,49,0.25); border-radius: var(--r-md); padding: 12px; font-size: 12px; font-weight: 500; color: var(--amber); margin-top: 16px; display: none; text-align: center;}
 .ponder-note.show { display: block; }
+.alert-note { font-size: 12px; color: var(--amber); font-weight: 700; margin-top: 4px; display: block; }
 .cal-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r-lg); padding: 16px; margin-bottom: 20px; }
 .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .cal-label { font-weight: 700; font-size: 15px; }
@@ -423,6 +423,16 @@ const COLORS = [
   { dot: '#9775fa', bg: 'rgba(151, 117, 250, 0.13)' },
 ];
 
+/* Fechas límite y feriados */
+const TERM_START = new Date(2026, 2, 9); // 9 de marzo 2026
+const TERM_END = new Date(2026, 5, 20, 23, 59, 59); // 20 de junio 2026
+const FERIADOS = [
+  '2026-03-23', '2026-03-24',
+  '2026-04-02', '2026-04-03',
+  '2026-05-01', '2026-05-25',
+  '2026-06-15', '2026-06-20'
+];
+
 function getConfig() {
   if (!userData.config) userData.config = { promo: 80, regular: 60 };
   return userData.config;
@@ -541,15 +551,17 @@ function buildCardHTML(m, isToday = false) {
   let iniciales = m.nombre.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
   if (m.nombre.split(' ').length === 1) iniciales = m.nombre.substring(0, 1).toUpperCase();
 
-  const pc = s.pct === null ? 'c-muted' : (s.pct >= conf.promo ? 'c-green' : s.pct >= conf.regular ? 'c-accent' : 'c-red');
-  const pv = s.pct === null ? '—' : Math.round(s.pct) + '%';
-  const pl = s.pct === null ? 'regular' : (s.pct >= conf.promo ? 'promo' : s.pct >= conf.regular ? 'regular' : 'libre');
-  const pt = s.pct === null ? 'Sin datos' : (s.pct >= conf.promo ? 'Promo' : s.pct >= conf.regular ? 'Regular' : 'Libre');
+  const pctToUse = s.pctGlobal !== null ? s.pctGlobal : (s.pctActual !== null ? s.pctActual : null);
+  
+  const pc = pctToUse === null ? 'c-muted' : (pctToUse >= conf.promo ? 'c-green' : pctToUse >= conf.regular ? 'c-accent' : 'c-red');
+  const pv = pctToUse === null ? '—' : Math.round(pctToUse) + '%';
+  const pl = pctToUse === null ? 'regular' : (pctToUse >= conf.promo ? 'promo' : pctToUse >= conf.regular ? 'regular' : 'libre');
+  const pt = pctToUse === null ? 'Sin datos' : (pctToUse >= conf.promo ? 'Promo' : pctToUse >= conf.regular ? 'Regular' : 'Libre');
   const dt = m.dias.join(', ') || 'sin días';
   const c = COLORS[m.color] || COLORS[0];
   
-  const pWidth = s.pct === null ? '0%' : Math.round(s.pct) + '%';
-  const pColor = s.pct === null ? 'var(--bg4)' : (s.pct >= conf.promo ? 'var(--green)' : s.pct >= conf.regular ? 'var(--accent2)' : 'var(--red)');
+  const pWidth = pctToUse === null ? '0%' : Math.round(pctToUse) + '%';
+  const pColor = pctToUse === null ? 'var(--bg4)' : (pctToUse >= conf.promo ? 'var(--green)' : pctToUse >= conf.regular ? 'var(--accent2)' : 'var(--red)');
   
   let cardClass = isToday ? 'm-card is-today' : 'm-card';
   
@@ -564,7 +576,6 @@ function buildCardHTML(m, isToday = false) {
      const misActive = estadoHoy === 'mis' ? 'active' : '';
      const nocActive = estadoHoy === 'noc' ? 'active' : '';
 
-     /* Textos ajustados para que no se desborde la tarjeta en pantallas chicas */
      qaHTML = `<div class="quick-actions">
                  <button class="qa-btn qa-att ${attActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'att')">✓ Pres.</button>
                  <button class="qa-btn qa-mis ${misActive}" onclick="event.stopPropagation(); quickMark('${m.id}', 'mis')">✕ Aus.</button>
@@ -605,21 +616,27 @@ function renderDash() {
 
   const mats = userData.materias;
   const conf = getConfig();
-  let tAtt = 0, tVal = 0;
   let cLibre = 0, cPromo = 0;
+  
+  let totalPctGlobal = 0;
+  let countMatsGlobal = 0;
 
   mats.forEach(m => { 
     const s = calcStats(m); 
-    tAtt += s.att; 
-    tVal += s.validas; 
     
-    if (s.pct !== null) {
-      if (s.pct < conf.regular) cLibre++;
-      else if (s.pct >= conf.promo) cPromo++;
+    if (s.pctGlobal !== null) {
+      totalPctGlobal += s.pctGlobal;
+      countMatsGlobal++;
+      if (s.pctGlobal < conf.regular) cLibre++;
+      else if (s.pctGlobal >= conf.promo) cPromo++;
+    } else if (s.pctActual !== null) {
+      // Fallback a clases cargadas si no empezó
+      if (s.pctActual < conf.regular) cLibre++;
+      else if (s.pctActual >= conf.promo) cPromo++;
     }
   });
 
-  document.getElementById('avg-pct').textContent = tVal > 0 ? Math.round((tAtt / tVal) * 100) + '%' : '—';
+  document.getElementById('avg-pct').textContent = countMatsGlobal > 0 ? Math.round(totalPctGlobal / countMatsGlobal) + '%' : '—';
   document.getElementById('mat-libre').textContent = cLibre;
   document.getElementById('mat-promo').textContent = cPromo;
   
@@ -663,15 +680,41 @@ function renderDash() {
   document.getElementById('materia-container').innerHTML = h;
 }
 
+function getTotalClasses(m) {
+  if (!m.dias || m.dias.length === 0) return 0;
+  let total = 0;
+  let cur = new Date(TERM_START);
+  
+  while (cur <= TERM_END) {
+    const dow = cur.getDay();
+    const dn = DIAS_F[dow];
+    
+    if (m.dias.includes(dn)) {
+      const k = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-${String(cur.getDate()).padStart(2,'0')}`;
+      if (!FERIADOS.includes(k) && (m.asistencias || {})[k] !== 'noc') {
+        total++;
+      }
+    }
+    cur.setDate(cur.getDate() + 1);
+  }
+  return total;
+}
+
 function calcStats(m) {
   const a = m.asistencias || {};
-  let att = 0, mis = 0, noc = 0;
-  Object.values(a).forEach(v => { if (v === 'att') att++; else if (v === 'mis') mis++; else if (v === 'noc') noc++; });
-  const p = att + mis + noc;
-  const v = att + mis;
-  const w = v > 0 ? (att + mis) / (p - noc) : 1;
-  const pct = v > 0 ? (att / v) * 100 : null;
-  return { att, mis, noc, programadas: p, validas: v, pct, pesoUnitario: w };
+  let att = 0, mis = 0, nocManuales = 0;
+  
+  Object.values(a).forEach(v => { 
+    if (v === 'att') att++; 
+    else if (v === 'mis') mis++; 
+    else if (v === 'noc') nocManuales++; 
+  });
+  
+  const totalClasesCuatrimestre = getTotalClasses(m);
+  const pctActual = (att + mis) > 0 ? (att / (att + mis)) * 100 : null;
+  const pctGlobal = totalClasesCuatrimestre > 0 ? (att / totalClasesCuatrimestre) * 100 : null;
+
+  return { att, mis, nocManuales, validas: att + mis, pctActual, pctGlobal, totalClasesCuatrimestre };
 }
 
 function openDetail(id) {
@@ -691,57 +734,77 @@ function updateDetail() {
   const m = userData.materias.find(x => x.id === curId);
   if (!m) return;
   
-  const conf = getConfig();
   document.getElementById('det-mat-name').textContent = m.nombre;
   
   const s = calcStats(m);
-  const est = s.pct === null ? null : (s.pct >= conf.promo ? 'promo' : s.pct >= conf.regular ? 'regular' : 'libre');
-  renderProy(s, est);
+  renderProy(s);
   renderCal();
 }
 
-function renderProy(s, est) {
-  const n = document.getElementById('ponder-note');
-  if (s.pct === null) {
-    document.getElementById('proy-content').innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:10px;font-weight:500;">Registrá tu primera clase en el calendario para ver las estadísticas.</p>';
-    n.classList.remove('show');
-    return;
-  }
-  
+function renderProy(s) {
   const conf = getConfig();
   let r = '';
   const pv = (l, v, c) => `<div class="proy-row"><span class="proy-lbl">${l}</span><span class="proy-val" style="color:${c}">${v}</span></div>`;
 
-  const pctTxt = Math.round(s.pct) + '%';
-  const asistTxt = `${s.att} presentes de ${s.validas}`;
+  if (s.totalClasesCuatrimestre === 0) {
+    document.getElementById('proy-content').innerHTML = '<p style="font-size:13px;color:var(--text3);text-align:center;padding:10px;font-weight:500;">No hay clases calculadas. Revisá los días de cursada o las fechas límite.</p>';
+    return;
+  }
+
+  // Cálculos de márgenes
+  const minPromo = Math.ceil(s.totalClasesCuatrimestre * (conf.promo / 100));
+  const minReg = Math.ceil(s.totalClasesCuatrimestre * (conf.regular / 100));
+
+  const maxAusenciasPromo = s.totalClasesCuatrimestre - minPromo;
+  const maxAusenciasReg = s.totalClasesCuatrimestre - minReg;
+
+  const faltasDispPromo = maxAusenciasPromo - s.mis;
+  const faltasDispReg = maxAusenciasReg - s.mis;
+
+  let estGlobal = 'libre';
+  if (faltasDispPromo >= 0) estGlobal = 'promo';
+  else if (faltasDispReg >= 0) estGlobal = 'regular';
+
+  const asistTxt = `${s.att} presentes y ${s.mis} faltas`;
   let estTxt = '';
   let estColor = '';
 
-  if (est === 'promo') { estTxt = 'Promocional 🎉'; estColor = 'var(--green)'; }
-  else if (est === 'regular') { estTxt = 'Regular ✓'; estColor = 'var(--accent2)'; }
-  else { estTxt = 'Sin regularidad ✕'; estColor = 'var(--red)'; }
+  if (estGlobal === 'promo') { estTxt = 'En carrera para Promo 🎉'; estColor = 'var(--green)'; }
+  else if (estGlobal === 'regular') { estTxt = 'En carrera para Regular ✓'; estColor = 'var(--accent2)'; }
+  else { estTxt = 'Libre matemáticamente ✕'; estColor = 'var(--red)'; }
 
-  r += pv('Estado actual', estTxt, estColor);
-  r += pv('Asistencia', `${pctTxt} (${asistTxt})`, 'var(--text)');
+  r += pv('Estado proyectado', estTxt, estColor);
+  r += pv('Clases totales estimadas', s.totalClasesCuatrimestre, 'var(--text)');
+  r += pv('Registro actual', asistTxt, 'var(--text2)');
 
-  if (est === 'promo') {
-    const m = Math.floor((s.att - (conf.promo/100) * s.validas) / (conf.promo/100));
-    r += pv('Margen', m > 0 ? `Podés faltar ${m} clase${m>1?'s':''} sin perder la promo` : 'Estás al límite de la promo', 'var(--text2)');
-  } else if (est === 'regular') {
-    const c = Math.ceil((conf.promo/100 * s.validas - s.att) / (1 - conf.promo/100));
-    const f = Math.floor((s.att - (conf.regular/100) * s.validas) / (conf.regular/100));
-    r += pv('Para promocionar', `Te faltan ${c} asistencia${c>1?'s':''} seguidas`, 'var(--text2)');
-    r += pv('Margen', f > 0 ? `Podés faltar ${f} clase${f>1?'s':''} sin quedar libre` : 'Estás al límite de la regularidad', 'var(--text2)');
+  // Proyección de Promo
+  if (faltasDispPromo > 0) {
+    let alertHtml = '';
+    if (faltasDispPromo <= 2) alertHtml = `<span class="alert-note">⚠️ A ${faltasDispPromo} falta(s) de perder la promo</span>`;
+    r += pv('Para Promocionar', `Podés faltar ${faltasDispPromo} vez más ${alertHtml}`, 'var(--green)');
+  } else if (faltasDispPromo === 0) {
+    r += pv('Para Promocionar', `Límite alcanzado (0 faltas) <span class="alert-note">⚠️ Última oportunidad</span>`, 'var(--amber)');
   } else {
-    const c = Math.ceil((conf.regular/100 * s.validas - s.att) / (1 - conf.regular/100));
-    r += pv('Para regularizar', `Necesitás ${c} asistencia${c>1?'s':''} seguidas`, 'var(--text2)');
+    r += pv('Para Promocionar', `Perdida (${Math.abs(faltasDispPromo)} faltas de más)`, 'var(--red)');
+  }
+
+  // Proyección de Regularidad
+  if (faltasDispReg > 0) {
+    let alertHtml = '';
+    if (faltasDispReg <= 4) alertHtml = `<span class="alert-note">⚠️ A ${faltasDispReg} falta(s) de quedar libre</span>`;
+    r += pv('Para Regularizar', `Podés faltar ${faltasDispReg} vez más ${alertHtml}`, 'var(--accent2)');
+  } else if (faltasDispReg === 0) {
+    r += pv('Para Regularizar', `Límite alcanzado (0 faltas) <span class="alert-note">⚠️ Última oportunidad</span>`, 'var(--amber)');
+  } else {
+    r += pv('Para Regularizar', `Libre (${Math.abs(faltasDispReg)} faltas de más)`, 'var(--red)');
   }
 
   document.getElementById('proy-content').innerHTML = r;
   
-  if (s.noc > 0) {
+  const n = document.getElementById('ponder-note');
+  if (s.nocManuales > 0) {
     n.classList.add('show');
-    n.textContent = `Se ignoraron ${s.noc} clase(s) marcadas como "Sin clase" para hacer este cálculo.`;
+    n.textContent = `Se descontaron ${s.nocManuales} clase(s) marcadas como "Sin clase" además de los feriados nacionales.`;
   } else {
     n.classList.remove('show');
   }
@@ -770,17 +833,29 @@ function renderCal() {
     
     const k = `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const reg = (m.asistencias || {})[k];
+    const isFeriado = FERIADOS.includes(k);
     const it = yr===today.getFullYear() && mo===today.getMonth() && d===today.getDate();
     let c = 'cal-d';
+    
     if (ic) {
-      c += ' cls-day';
-      if (reg === 'att') c += ' att';
-      else if (reg === 'mis') c += ' mis';
-      else if (reg === 'noc') c += ' noc';
+      if (isFeriado) {
+        c += ' noc'; // Lo pintamos sutilmente como si no hubiera clase
+      } else {
+        c += ' cls-day';
+        if (reg === 'att') c += ' att';
+        else if (reg === 'mis') c += ' mis';
+        else if (reg === 'noc') c += ' noc';
+      }
     }
     if (it) c += ' today-ring';
-    const cl = ic ? `onclick="openDay('${k}',${d},${mo},${yr})"` : '';
-    h += `<div class="${c}" ${cl}>${d}</div>`;
+    
+    // Si es feriado no dejamos hacer clic para marcar asistencia
+    const cl = (ic && !isFeriado) ? `onclick="openDay('${k}',${d},${mo},${yr})"` : '';
+    
+    // Agregamos una F pequeñita si es feriado
+    const feriadoTag = (ic && isFeriado) ? `<span style="font-size: 8px; position: absolute; bottom: 2px;">F</span>` : '';
+    
+    h += `<div class="${c}" style="position:relative;" ${cl}>${d}${feriadoTag}</div>`;
   }
   document.getElementById('cal-grid').innerHTML = h;
 }
